@@ -61,6 +61,53 @@ def _parse_chord(chord_str: str):
 def register_tools(mcp):
 
     @mcp.tool()
+    def create_midi_clip(
+        track_index: int,
+        start_position: float,
+        length: float,
+        notes: list[dict],
+    ) -> dict:
+        """Create one MIDI item and populate it with a batch of relative-time notes."""
+        try:
+            project = get_project()
+            track = project.tracks[track_index]
+            item = track.add_midi_item(start_position, start_position + length)
+            take = item.active_take
+            for note in notes:
+                start = float(note["start"])
+                note_length = float(note["length"])
+                take.add_note(
+                    start=start,
+                    end=start + note_length,
+                    pitch=int(note["pitch"]),
+                    velocity=int(note.get("velocity", 100)),
+                    channel=int(note.get("channel", 0)),
+                )
+            return {
+                "success": True,
+                "track_index": track_index,
+                "item_index": track.n_items - 1,
+                "note_count": len(notes),
+                "position": item.position,
+                "length": item.length,
+            }
+        except Exception as e:
+            logger.error(f"create_midi_clip failed: {e}")
+            return {"success": False, "error": str(e)}
+
+    @mcp.tool()
+    def delete_midi_item(track_index: int, item_index: int) -> dict:
+        """Delete a media item from a track by its current item index."""
+        try:
+            project = get_project()
+            track = project.tracks[track_index]
+            item = track.items[item_index]
+            deleted = bool(RPR.DeleteTrackMediaItem(track.id, item.id))
+            return {"success": deleted, "track_index": track_index, "item_index": item_index}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    @mcp.tool()
     def create_midi_item(track_index: int, start_position: float, length: float) -> dict:
         """Create an empty MIDI item on a track. Returns item_id for use with add_midi_note."""
         try:

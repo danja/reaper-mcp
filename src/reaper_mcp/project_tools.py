@@ -19,10 +19,13 @@ def register_tools(mcp):
         try:
             RPR.Main_OnCommand(41929, 0)  # File: New project
             project = get_project()
-            project.bpm = tempo
             if time_signature:
                 num, denom = map(int, time_signature.split("/"))
-                project.time_signature = (num, denom)
+                RPR.SetTempoTimeSigMarker(
+                    project.id, -1, 0.0, -1, 0.0, tempo, num, denom, False
+                )
+            else:
+                project.bpm = tempo
             return {
                 "success": True,
                 "name": name or f"New Project {time.strftime('%Y-%m-%d %H-%M-%S')}",

@@ -21,10 +21,8 @@ def register_tools(mcp):
         try:
             project = get_project()
             track = project.tracks[track_index]
-            fx_index = track.add_fx(fx_name)
-            if fx_index < 0:
-                return {"success": False, "error": f"Plugin not found: '{fx_name}'"}
-            fx = track.fxs[fx_index]
+            fx = track.add_fx(fx_name)
+            fx_index = fx.index
             return {
                 "success": True,
                 "fx_index": fx_index,
