@@ -39,12 +39,11 @@ def register_tools(mcp):
         try:
             project = get_project()
             if not project_path:
-                proj_name = project.name or f"Project {time.strftime('%Y-%m-%d %H-%M-%S')}"
-                default_dir = Path.home() / "Documents" / "REAPER Projects"
-                os.makedirs(default_dir, exist_ok=True)
-                project_path = str(default_dir / f"{proj_name}.rpp")
-            os.makedirs(os.path.dirname(os.path.abspath(project_path)), exist_ok=True)
-            project.save(project_path)
+                project.save(force_save_as=False)
+                project_path = project.path
+            else:
+                os.makedirs(os.path.dirname(os.path.abspath(project_path)), exist_ok=True)
+                RPR.Main_SaveProjectEx(project.id, project_path, 0)
             return {"success": True, "project_path": project_path}
         except Exception as e:
             logger.error(f"save_project failed: {e}")

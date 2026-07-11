@@ -8,10 +8,35 @@ from reaper_mcp.connection import get_project
 logger = logging.getLogger("reaper_mcp.mixing_tools")
 
 
+_SHOW_ENVELOPE_ACTIONS = {
+    "Volume": 40406,
+    "Pan": 40407,
+}
+
+
 def _db_to_linear(db: float) -> float:
     if db <= -150:
         return 0.0
     return 10 ** (db / 20.0)
+
+
+def _is_valid_pointer(pointer) -> bool:
+    return bool(pointer) and not str(pointer).endswith("0x0000000000000000")
+
+
+def _get_or_create_track_envelope(project, track, name: str):
+    """Return a track envelope, creating/showing it through REAPER if needed."""
+    envelope = RPR.GetTrackEnvelopeByName(track.id, name)
+    if _is_valid_pointer(envelope):
+        return envelope
+
+    selected = [candidate for candidate in project.tracks if candidate.is_selected]
+    RPR.SetOnlyTrackSelected(track.id)
+    RPR.Main_OnCommand(_SHOW_ENVELOPE_ACTIONS[name], 0)
+    RPR.SetTrackSelected(track.id, False)
+    for candidate in selected:
+        RPR.SetTrackSelected(candidate.id, True)
+    return RPR.GetTrackEnvelopeByName(track.id, name)
 
 
 def register_tools(mcp):
@@ -26,17 +51,19 @@ def register_tools(mcp):
         try:
             project = get_project()
             track = project.tracks[track_index]
-            envelope = RPR.GetTrackEnvelopeByName(track.id, "Volume")
-            if not envelope:
+            envelope = _get_or_create_track_envelope(project, track, "Volume")
+            if not _is_valid_pointer(envelope):
                 return {
                     "success": False,
                     "error": (
-                        "Volume envelope not found. Show it first: right-click the track "
-                        "in REAPER and choose 'Show envelope for track volume'."
+                        "Volume envelope could not be created for this track."
                     ),
                 }
             linear_val = _db_to_linear(value_db)
-            RPR.InsertEnvelopePoint(envelope, position, linear_val, 0, 0, False, True)
+            scaling_mode = RPR.GetEnvelopeScalingMode(envelope)
+            envelope_val = RPR.ScaleToEnvelopeMode(scaling_mode, linear_val)
+            RPR.DeleteEnvelopePointRange(envelope, position - 1e-6, position + 1e-6)
+            RPR.InsertEnvelopePoint(envelope, position, envelope_val, 0, 0, False, True)
             RPR.Envelope_SortPoints(envelope)
             return {"success": True, "track_index": track_index, "position": position, "value_db": value_db}
         except Exception as e:
@@ -52,15 +79,15 @@ def register_tools(mcp):
         try:
             project = get_project()
             track = project.tracks[track_index]
-            envelope = RPR.GetTrackEnvelopeByName(track.id, "Pan")
-            if not envelope:
+            envelope = _get_or_create_track_envelope(project, track, "Pan")
+            if not _is_valid_pointer(envelope):
                 return {
                     "success": False,
                     "error": (
-                        "Pan envelope not found. Show it first: right-click the track "
-                        "in REAPER and choose 'Show envelope for track pan'."
+                        "Pan envelope could not be created for this track."
                     ),
                 }
+            RPR.DeleteEnvelopePointRange(envelope, position - 1e-6, position + 1e-6)
             RPR.InsertEnvelopePoint(envelope, position, pan, 0, 0, False, True)
             RPR.Envelope_SortPoints(envelope)
             return {"success": True, "track_index": track_index, "position": position, "pan": pan}

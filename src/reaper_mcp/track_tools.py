@@ -1,4 +1,5 @@
 import logging
+import math
 
 import reapy
 from reapy import reascript_api as RPR
@@ -6,6 +7,25 @@ from reapy import reascript_api as RPR
 from reaper_mcp.connection import get_project
 
 logger = logging.getLogger("reaper_mcp.track_tools")
+
+
+def _db_to_linear(db: float) -> float:
+    return 0.0 if db <= -150 else 10 ** (db / 20.0)
+
+
+def _linear_to_db(value: float) -> float:
+    return -150.0 if value <= 0 else 20.0 * math.log10(value)
+
+
+def _track_mix_state(track) -> dict:
+    """Read mix properties through the ReaScript API supported by reapy 0.10."""
+    volume = RPR.GetMediaTrackInfo_Value(track.id, "D_VOL")
+    return {
+        "volume_db": _linear_to_db(volume),
+        "pan": RPR.GetMediaTrackInfo_Value(track.id, "D_PAN"),
+        "muted": bool(RPR.GetMediaTrackInfo_Value(track.id, "B_MUTE")),
+        "soloed": bool(RPR.GetMediaTrackInfo_Value(track.id, "I_SOLO")),
+    }
 
 
 def register_tools(mcp):
@@ -65,8 +85,8 @@ def register_tools(mcp):
         try:
             project = get_project()
             track = project.tracks[track_index]
-            track.volume = volume_db
-            return {"success": True, "track_index": track_index, "volume_db": track.volume}
+            RPR.SetMediaTrackInfo_Value(track.id, "D_VOL", _db_to_linear(volume_db))
+            return {"success": True, "track_index": track_index, "volume_db": volume_db}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -76,8 +96,8 @@ def register_tools(mcp):
         try:
             project = get_project()
             track = project.tracks[track_index]
-            track.pan = pan
-            return {"success": True, "track_index": track_index, "pan": track.pan}
+            RPR.SetMediaTrackInfo_Value(track.id, "D_PAN", pan)
+            return {"success": True, "track_index": track_index, "pan": pan}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -87,8 +107,8 @@ def register_tools(mcp):
         try:
             project = get_project()
             track = project.tracks[track_index]
-            track.mute = muted
-            return {"success": True, "track_index": track_index, "muted": track.mute}
+            RPR.SetMediaTrackInfo_Value(track.id, "B_MUTE", float(muted))
+            return {"success": True, "track_index": track_index, "muted": muted}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -98,8 +118,8 @@ def register_tools(mcp):
         try:
             project = get_project()
             track = project.tracks[track_index]
-            track.solo = soloed
-            return {"success": True, "track_index": track_index, "soloed": track.solo}
+            RPR.SetMediaTrackInfo_Value(track.id, "I_SOLO", float(soloed))
+            return {"success": True, "track_index": track_index, "soloed": soloed}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -122,17 +142,13 @@ def register_tools(mcp):
                     "index": i,
                     "position": item.position,
                     "length": item.length,
-                    "name": item.name,
                 })
 
             return {
                 "success": True,
                 "track_index": track_index,
                 "name": track.name,
-                "volume_db": track.volume,
-                "pan": track.pan,
-                "muted": track.mute,
-                "soloed": track.solo,
+                **_track_mix_state(track),
                 "fx_count": track.n_fxs,
                 "fx": fx_list,
                 "item_count": track.n_items,
@@ -152,10 +168,7 @@ def register_tools(mcp):
                 tracks.append({
                     "index": i,
                     "name": track.name,
-                    "volume_db": track.volume,
-                    "pan": track.pan,
-                    "muted": track.mute,
-                    "soloed": track.solo,
+                    **_track_mix_state(track),
                     "fx_count": track.n_fxs,
                     "item_count": track.n_items,
                 })
