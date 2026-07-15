@@ -86,7 +86,7 @@ reaper-mcp-server --debug  # with debug logging
 `set_track_volume` `set_track_pan` `set_track_mute` `set_track_solo` `set_send_volume` `set_master_volume` `add_volume_automation` `add_pan_automation`
 
 ### Rendering
-`render_project` `render_stems` `render_time_selection`
+`render_project` `render_stems` `render_time_selection` `render_track_with_sources` `find_reaper_actions` `run_track_render_action`
 
 ### Mastering
 `apply_mastering_chain` `apply_limiter` `normalize_project`

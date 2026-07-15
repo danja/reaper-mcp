@@ -2,12 +2,13 @@
 
 ## Current handoff
 
-- Latest completed project: `/home/danny/Music/phoenix/phoenix-arrangement-v04.RPP`
+- Latest known-good project: `/home/danny/Music/phoenix/phoenix-arrangement-v10.RPP`
 - Tempo/form: 130 BPM, 4/4, 164 planned bars (302.77 seconds)
 - The full Up/Down lifecycle arrangement and narrative volume envelopes are present.
 - A muted, empty five-minute MIDI item on `tune` now gives REAPER a concrete playback endpoint. This fixed playback stopping around 2:31.
 - The user has auditioned the arrangement and reports that it sounds good.
-- Rendering is intentionally left to the user.
+- Full-mix rendering is intentionally left to the user. A source-aware print of
+  Counterpointer Down has been created and placed in the project.
 
 ## Industrial Ground edit: current live state
 
@@ -77,7 +78,35 @@ Implementation record:
 
 Only the user's listening review and any resulting balance adjustment remain.
 
-## MCP source changes awaiting restart
+## Surreal medieval timbral pass completed
+
+The approved `v04` structure is preserved. `v05` adds motion to the existing instrumentation and effects without adding new dense layers.
+
+- Both MelGen tracks retain their GM Reed Organ patch and now use ReaControlMIDI automation:
+  - CC processing enabled throughout;
+  - expression/volume breathing shaped around each audible section;
+  - mirrored MIDI-pan movement between ascending and descending voices;
+  - small pitch-wheel inflections for unstable, non-equal-tempered colour without turning into obvious pitch effects.
+- Cadence Up/Down StereoChorus now changes speed and depth by narrative scene:
+  - restrained beating in ordinary life/aging;
+  - deeper, slower ritual modulation for aromatic branches and enclosure;
+  - faster, wider instability during the pyre;
+  - luminous but controlled movement during resurrection.
+- Counterpointer delays now use asymmetric feedback, wet/dry, and tempo-division envelopes during aging and rebirth, creating antiphonal echoes rather than a fixed delay wash.
+- DrumGen's Rift is host-enabled but controlled by a Bypass envelope:
+  - bypassed during the main body of the arrangement;
+  - active only in the wingbeat transition around bars 33-39 and the fire/consumption section around bars 97-112;
+  - Density, Damage, Drift, Pitch, Mix, and Chop evolve inside those windows and reset afterward.
+- Automation write results:
+  - 74 ReaControlMIDI points;
+  - 144 chorus/delay/Rift points;
+  - no tool-reported failures.
+- Saved-file inspection confirms all expected named parameter envelopes and point counts.
+- Focused live verification confirms ReaControlMIDI `CC Enable` is on, Rift is bypassed before bar 33, and becomes active inside the transition.
+- The edit cursor is left at 57.2308 s, just before bar 33, for manual audition.
+- Rendering remains manual.
+
+## MCP source changes active after restart
 
 - Fixed project time-signature setting/reporting and `.RPP` path reporting.
 - Fixed python-reapy FX parameter reads/writes (`normalized` and `formatted`).
@@ -89,5 +118,97 @@ Only the user's listening review and any resulting balance adjustment remain.
 - Added explicit time-selection control.
 - Enhanced `list_sends` with destination track index/name.
 - Added `delete_volume_automation_range` for safely replacing copied envelopes.
+- Added `render_track_with_sources` for receive-driven/stateful tracks. It temporarily
+  unmutes the target and an explicit complete upstream dependency list, disables the
+  sources' direct master output, renders only the target from time zero (unless told
+  otherwise), restores track state, and can optionally import the print to a new track.
+- Corrected render output handling: `RENDER_FILE` is now the parent directory and
+  `RENDER_PATTERN` is the file stem. Render success now requires a regular file with
+  an audio payload rather than accepting a directory as a successful render.
 
-Run a source compile check before restart. After restart, smoke-test the new read-only/reporting calls before making the `v04` edit.
+## Counterpointer Down monotone: source-aware print failed; native render pending
+
+- The user reports that `counterpointer down` currently produces a discordant
+  monotone. This is consistent with Counterpointer retaining one learned pitch when
+  transport begins after its input history or when receiving source tracks are muted.
+- Saved `v05` routing confirms `counterpointer down` (track 12) directly receives from
+  `bassgen up` (6), `bassgen down` (7), `melgen up` (9), and `melgen down` (10).
+- Those four tracks themselves depend on all three ground tracks: `ground up` (3),
+  `ground down` (4), and `ground down industrial` (5). The full source closure for a
+  print is therefore `[3, 4, 5, 6, 7, 9, 10]`, not only the four immediate senders.
+- `phoenix-arrangement-v06.RPP` was saved as a safety checkpoint before rendering.
+- `render_track_with_sources` rendered target track 12 using complete source closure
+  `[3, 4, 5, 6, 7, 9, 10]`, from 0 to 302.7692 seconds, without importing or muting.
+- The test output is `/home/danny/Music/phoenix/counterpointer-down-v06-test.wav`:
+  regular WAV, PCM 24-bit stereo at 48 kHz, 302.769229 seconds, 87,198,228 bytes.
+- The print was appended at time 0 on track 23, named
+  `counterpointer down [printed]`. REAPER copied its project media to
+  `/home/danny/Music/phoenix/Media/counterpointer-down-v06-test.wav`.
+- Live `counterpointer down` remains track 12 with its five-FX generator chain intact,
+  but is statically muted. The printed track is unmuted, has one audio item, and no FX
+  because pan, volume-envelope, instrument, and delay processing are baked in.
+- The completed arrangement is saved as
+  `/home/danny/Music/phoenix/phoenix-arrangement-v07.RPP` and independently confirmed
+  as a regular RPP containing both the muted live track and appended print.
+- `get_project_info` still reports the open tab as `v05`; this is the known behavior
+  where explicit `save_project` writes a durable copy without changing tab identity.
+  Treat `v07` as authoritative and load it explicitly in a future session if needed.
+- Track count is now 24. Existing indices 0-22 are unchanged because the print was
+  appended; the printed track is index 23.
+- The user auditioned the printed track and found it silent. Independent FFmpeg
+  analysis confirms both peak and mean at -91 dBFS across the file: it contains only
+  digital silence/dither despite being a structurally valid 87 MB WAV. The earlier
+  "resolved" assessment was incorrect.
+- Do not use or trust `counterpointer-down-v06-test.wav` or its project-media copy.
+  In the current saved `v07`, track 23 is this invalid print and track 12 is the muted
+  live generator. Restore audible working state by muting/removing track 23 and
+  unmuting track 12 before further audition.
+- MCP source now rejects effectively silent WAV renders and adds
+  `find_reaper_actions` plus constrained `run_track_render_action`. These need another
+  MCP restart.
+- The bad `v07` state was preserved unchanged as `phoenix-arrangement-v08.RPP`.
+  The audible fallback state was then saved as `phoenix-arrangement-v09.RPP`: live
+  generator track 12 is unmuted and invalid printed track 23 is muted. Track 23 has
+  not been deleted, so its provenance remains inspectable until a valid native stem
+  replaces it.
+- After restart, search installed actions for `render tracks` and choose a native
+  stereo stem/render-and-mute option from REAPER's Track menu. Run it on live target
+  track 12 with source closure `[3, 4, 5, 6, 7, 9, 10]` temporarily unmuted. Verify
+  the resulting stem has real signal before removing the invalid printed track.
+- First post-restart testing found that the initial `find_reaper_actions` implementation
+  enumerated the entire action list through thousands of distant-API round trips. Two
+  parallel searches were terminated, but their underlying calls left that MCP server
+  occupied; no render action or project mutation occurred. Source now checks only the
+  six built-in Track Render/Freeze IDs 41716-41721 and still resolves/validates each
+  installed action name at runtime. Restart MCP again before continuing.
+
+## Native stereo stem attempt: failed offline, live load uncertain
+
+- Focused action discovery showed IDs 41716-41721 are the six "render selected area"
+  variants in REAPER 7.77, not the entire-project family. ID 40788 was then verified
+  at runtime as exactly `Track: Render tracks to stereo stem tracks (and mute originals)`.
+- `phoenix-arrangement-v10.RPP` was saved before executing native action 40788 on
+  Counterpointer Down with source closure `[3, 4, 5, 6, 7, 9, 10]` unmuted.
+- REAPER inserted `counterpointer down - stem` before the source track, shifting the
+  original live generator from index 12 to 13 and the old invalid print from 23 to 24.
+  The new stem was index 12, unmuted, with the original narrative volume envelope;
+  the live source at 13 was muted by the native action.
+- The native media file is
+  `/home/danny/Music/phoenix/Media/phoenix-arrangement-v09_stems_counterpointer down.wav`:
+  32-bit float stereo/48 kHz, 303.769229 seconds, 116,648,128 bytes.
+- This native offline render is also invalid. `astats` measured roughly +13 dBFS RMS,
+  peaks around +13.7 dBFS, DC offset up to 0.118, and raw samples around +/-4.8 full
+  scale. A spectrogram of the intended audible interval showed continuous dense
+  broadband energy rather than a changing melodic Counterpointer line.
+- The failed native experiment was saved as `phoenix-arrangement-v11.RPP` for forensic
+  inspection only. Do not use it as the arrangement checkpoint.
+- A request to reload known-good `v10` timed out after 300 seconds. The subsequent
+  `get_project_info` poll also remained queued and its client was terminated. The
+  underlying load may still complete; inspect REAPER directly before retrying or
+  changing anything. If a modal dialog is present, dismiss it, then confirm `v10` is
+  loaded and re-list all tracks.
+- Both custom offline rendering and REAPER's native offline stem render mishandle this
+  stateful receive-driven chain. The next approach should be a true real-time print:
+  either force the native render to 1x online if the track-render action honors that
+  project setting, or route/record the target's stereo output onto a new track while
+  playing from time 0. Preserve `v10` before that experiment.

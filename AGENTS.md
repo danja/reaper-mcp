@@ -66,6 +66,26 @@ Rendering is currently not the preferred verification path for the Phoenix proje
 
 The render helper has previously treated an output path ending in `.wav` as a directory and allowed REAPER to create `$project.wav` inside it. It then reported the directory size as if it were the render file size. Do not claim a render is valid based only on `exists()` or a nonzero size. Confirm that the output is a regular audio file and inspect its duration/header.
 
+Stateful receive-driven generators such as Counterpointer can collapse to a repeated
+last-learned pitch when playback begins after their upstream sources, or when those
+sources are statically muted. `render_track_with_sources` prints such a target while
+temporarily processing an explicit source list. That list must be the complete
+upstream dependency closure, and the print should normally begin at project time 0.
+The tool suppresses the sources' direct master output and restores track state after
+rendering. It requires an MCP restart after source changes.
+
+Phoenix testing later proved that `render_track_with_sources` can still produce an
+effectively silent file for a receive-driven MIDI generator. Do not use file size as
+proof of signal: the failed WAV was 87 MB but measured only -91 dBFS peak. Prefer
+REAPER's native Track Render/Freeze actions through `find_reaper_actions` and
+`run_track_render_action`; keep the full source closure unmuted. WAV validation now
+rejects renders whose peak never exceeds -80 dBFS.
+
+Do not enumerate the complete REAPER action list across the distant API: one remote
+call per action can occupy the server for many minutes, and terminating the MCP client
+does not cancel the underlying enumeration. Track Render/Freeze discovery is limited
+to built-in command IDs 41716-41721 and validates their installed names at runtime.
+
 ## Downspout work
 
 - Read `/home/danny/github/downspout/AGENTS.md` before touching Downspout source.
