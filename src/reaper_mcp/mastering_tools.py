@@ -49,15 +49,22 @@ def register_tools(mcp):
     def set_master_fx_parameter(fx_index: int, param_index: int, value: float) -> dict:
         """Set a normalized parameter (0.0–1.0) on a master track FX plugin."""
         try:
+            if not 0.0 <= value <= 1.0:
+                return {"success": False, "error": "value must be between 0.0 and 1.0"}
             project = get_project()
             master = project.master_track
             fx = master.fxs[fx_index]
-            fx.params[param_index].normalized = value
+            param_name = fx.params[param_index].name
+            changed = bool(
+                RPR.TrackFX_SetParamNormalized(master.id, fx_index, param_index, value)
+            )
+            if not changed:
+                return {"success": False, "error": "REAPER rejected the parameter value"}
             return {
                 "success": True,
                 "fx_index": fx_index,
                 "param_index": param_index,
-                "param_name": fx.params[param_index].name,
+                "param_name": param_name,
                 "value": value,
             }
         except Exception as e:

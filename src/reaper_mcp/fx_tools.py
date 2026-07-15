@@ -55,11 +55,17 @@ def register_tools(mcp):
         Use get_fx_parameters to discover available parameters and their indices.
         """
         try:
+            if not 0.0 <= value <= 1.0:
+                return {"success": False, "error": "value must be between 0.0 and 1.0"}
             project = get_project()
             track = project.tracks[track_index]
             fx = track.fxs[fx_index]
-            fx.params[param_index].normalized = value
             param_name = fx.params[param_index].name
+            changed = bool(
+                RPR.TrackFX_SetParamNormalized(track.id, fx_index, param_index, value)
+            )
+            if not changed:
+                return {"success": False, "error": "REAPER rejected the parameter value"}
             return {
                 "success": True,
                 "track_index": track_index,

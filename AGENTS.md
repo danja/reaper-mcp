@@ -44,9 +44,9 @@ DPF's VST3 wrapper prepends hidden parameters for MIDI-input plugins. With MIDI 
 130 controls × 16 MIDI channels = 2080 hidden host parameters
 ```
 
-The plugin's own first parameter therefore commonly appears at REAPER host index `2080`, not `0`. REAPER may append additional host controls afterward.
+The plugin's own first parameter appears after this hidden block, but REAPER can also prepend host controls. Determine the exact offset with focused parameter-name queries rather than assuming `2080`.
 
-Example: Downspout Basilico declares 30 real parameters. Its local `ParamId::model` is index 0, but its REAPER VST3 host index is expected to be 2080. Industrial is raw model value 4 and normalized value 1.0. Always verify the host parameter name with `get_fx_parameter` before writing.
+Example: Downspout Basilico declares 30 real parameters. Its local `ParamId::model` is index 0, but focused inspection in this environment found `MIDI Ch. 16 CC 128` at host index 2080, `MIDI Ch. 16 CC 129` at 2081, and Basilico `Model` at 2082. Industrial is raw model value 4 and normalized value 1.0. Always verify the host parameter name with `get_fx_parameter` before writing.
 
 Do not “fix” this by changing a plugin's parameter table. The large count is wrapper behavior. Use focused MCP parameter access instead.
 
