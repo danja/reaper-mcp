@@ -98,6 +98,32 @@ def register_tools(mcp):
             return {"success": False, "error": str(e)}
 
     @mcp.tool()
+    def get_fx_parameter(track_index: int, fx_index: int, param_index: int) -> dict:
+        """Get one FX parameter without enumerating a plugin's full host parameter list."""
+        try:
+            project = get_project()
+            track = project.tracks[track_index]
+            fx = track.fxs[fx_index]
+            if param_index < 0 or param_index >= fx.n_params:
+                return {
+                    "success": False,
+                    "error": f"Parameter index {param_index} is outside 0-{fx.n_params - 1}",
+                }
+            param = fx.params[param_index]
+            return {
+                "success": True,
+                "track_index": track_index,
+                "fx_index": fx_index,
+                "fx_name": fx.name,
+                "param_index": param_index,
+                "param_name": param.name,
+                "normalized_value": float(param.normalized),
+                "formatted_value": param.formatted,
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    @mcp.tool()
     def add_fx_parameter_automation(
         track_index: int,
         fx_index: int,
