@@ -95,6 +95,33 @@ def register_tools(mcp):
             return {"success": False, "error": str(e)}
 
     @mcp.tool()
+    def delete_volume_automation_range(
+        track_index: int, start: float = 0.0, end: float = 1.0e12
+    ) -> dict:
+        """Delete track-volume automation points in a time range without deleting the envelope."""
+        try:
+            if end < start:
+                return {"success": False, "error": "Range end must not precede start"}
+            project = get_project()
+            track = project.tracks[track_index]
+            envelope = RPR.GetTrackEnvelopeByName(track.id, "Volume")
+            if not _is_valid_pointer(envelope):
+                return {
+                    "success": False,
+                    "error": "Track has no volume envelope",
+                }
+            RPR.DeleteEnvelopePointRange(envelope, start, end)
+            RPR.Envelope_SortPoints(envelope)
+            return {
+                "success": True,
+                "track_index": track_index,
+                "start": start,
+                "end": end,
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    @mcp.tool()
     def create_send(
         source_track_index: int, dest_track_index: int, volume_db: float = 0.0
     ) -> dict:
@@ -129,7 +156,23 @@ def register_tools(mcp):
                 vol = RPR.GetTrackSendInfo_Value(track.id, 0, i, "D_VOL")
                 pan = RPR.GetTrackSendInfo_Value(track.id, 0, i, "D_PAN")
                 muted = bool(RPR.GetTrackSendInfo_Value(track.id, 0, i, "B_MUTE"))
-                sends.append({"send_index": i, "volume_linear": vol, "pan": pan, "muted": muted})
+                destination = RPR.GetTrackSendInfo_Value(track.id, 0, i, "P_DESTTRACK")
+                destination_index = None
+                destination_name = None
+                for j in range(project.n_tracks):
+                    candidate = project.tracks[j]
+                    if candidate.id == destination or str(candidate.id) == str(destination):
+                        destination_index = j
+                        destination_name = candidate.name
+                        break
+                sends.append({
+                    "send_index": i,
+                    "destination_track_index": destination_index,
+                    "destination_track_name": destination_name,
+                    "volume_linear": vol,
+                    "pan": pan,
+                    "muted": muted,
+                })
             return {"success": True, "track_index": track_index, "sends": sends}
         except Exception as e:
             return {"success": False, "error": str(e)}

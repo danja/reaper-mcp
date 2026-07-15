@@ -58,7 +58,7 @@ def register_tools(mcp):
             project = get_project()
             track = project.tracks[track_index]
             fx = track.fxs[fx_index]
-            fx.params[param_index].normalized_value = value
+            fx.params[param_index].normalized = value
             param_name = fx.params[param_index].name
             return {
                 "success": True,
@@ -84,8 +84,8 @@ def register_tools(mcp):
                 params.append({
                     "index": i,
                     "name": param.name,
-                    "normalized_value": param.normalized_value,
-                    "formatted_value": param.formatted_value,
+                    "normalized_value": float(param.normalized),
+                    "formatted_value": param.formatted,
                 })
             return {
                 "success": True,
@@ -93,6 +93,41 @@ def register_tools(mcp):
                 "fx_index": fx_index,
                 "fx_name": fx.name,
                 "parameters": params,
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    @mcp.tool()
+    def add_fx_parameter_automation(
+        track_index: int,
+        fx_index: int,
+        param_index: int,
+        position: float,
+        value: float,
+    ) -> dict:
+        """Add a normalized (0.0-1.0) automation point for a track FX parameter."""
+        try:
+            if not 0.0 <= value <= 1.0:
+                return {"success": False, "error": "value must be between 0.0 and 1.0"}
+            project = get_project()
+            track = project.tracks[track_index]
+            fx = track.fxs[fx_index]
+            param = fx.params[param_index]
+            envelope = RPR.GetFXEnvelope(track.id, fx_index, param_index, True)
+            if not envelope or str(envelope) in ("0", "(TrackEnvelope*)0x0000000000000000"):
+                return {"success": False, "error": "FX parameter envelope could not be created"}
+            RPR.DeleteEnvelopePointRange(envelope, position - 1e-6, position + 1e-6)
+            RPR.InsertEnvelopePoint(envelope, position, value, 0, 0, False, True)
+            RPR.Envelope_SortPoints(envelope)
+            return {
+                "success": True,
+                "track_index": track_index,
+                "fx_index": fx_index,
+                "fx_name": fx.name,
+                "param_index": param_index,
+                "param_name": param.name,
+                "position": position,
+                "value": value,
             }
         except Exception as e:
             return {"success": False, "error": str(e)}

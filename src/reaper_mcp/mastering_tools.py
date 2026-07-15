@@ -52,7 +52,7 @@ def register_tools(mcp):
             project = get_project()
             master = project.master_track
             fx = master.fxs[fx_index]
-            fx.params[param_index].normalized_value = value
+            fx.params[param_index].normalized = value
             return {
                 "success": True,
                 "fx_index": fx_index,

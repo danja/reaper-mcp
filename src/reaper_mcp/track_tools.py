@@ -69,6 +69,50 @@ def register_tools(mcp):
             return {"success": False, "error": str(e)}
 
     @mcp.tool()
+    def duplicate_track(track_index: int, name: str = "") -> dict:
+        """Duplicate a track exactly, including its FX, routing, items, and envelopes."""
+        try:
+            project = get_project()
+            if track_index < 0 or track_index >= project.n_tracks:
+                return {"success": False, "error": f"Invalid track index: {track_index}"}
+
+            selected = []
+            for i in range(project.n_tracks):
+                track = project.tracks[i]
+                if bool(RPR.GetMediaTrackInfo_Value(track.id, "I_SELECTED")):
+                    selected.append(track)
+                RPR.SetTrackSelected(track.id, False)
+
+            source = project.tracks[track_index]
+            source_name = source.name
+            RPR.SetTrackSelected(source.id, True)
+            RPR.Main_OnCommand(40062, 0)  # Track: Duplicate tracks
+
+            duplicate_index = track_index + 1
+            if project.n_tracks <= duplicate_index:
+                return {"success": False, "error": "REAPER did not create the duplicate track"}
+            duplicate = project.tracks[duplicate_index]
+            if name:
+                duplicate.name = name
+
+            RPR.SetTrackSelected(duplicate.id, False)
+            for track in selected:
+                RPR.SetTrackSelected(track.id, True)
+
+            return {
+                "success": True,
+                "source_track_index": track_index,
+                "source_name": source_name,
+                "duplicate_track_index": duplicate_index,
+                "duplicate_name": duplicate.name,
+                "fx_count": duplicate.n_fxs,
+                "item_count": duplicate.n_items,
+            }
+        except Exception as e:
+            logger.error(f"duplicate_track failed: {e}")
+            return {"success": False, "error": str(e)}
+
+    @mcp.tool()
     def rename_track(track_index: int, name: str) -> dict:
         """Rename a track."""
         try:
