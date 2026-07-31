@@ -1,5 +1,6 @@
 import os
 import logging
+import math
 
 import reapy
 from reapy import reascript_api as RPR
@@ -13,6 +14,23 @@ MASTERING_PRESETS = {
     "loud":    ["ReaEQ", "ReaComp", "ReaComp", "ReaLimit"],
     "gentle":  ["ReaEQ", "ReaComp", "ReaLimit"],
 }
+
+
+def _db_to_linear(db: float) -> float:
+    return 0.0 if db <= -150.0 else 10 ** (db / 20.0)
+
+
+def _linear_to_db(value: float) -> float:
+    return -150.0 if value <= 0.0 else 20.0 * math.log10(value)
+
+
+def _set_master_volume_db(master, volume_db: float) -> float:
+    volume_db = float(volume_db)
+    if not math.isfinite(volume_db) or not -150.0 <= volume_db <= 12.0:
+        raise ValueError("volume_db must be between -150 and 12")
+    RPR.SetMediaTrackInfo_Value(master.id, "D_VOL", _db_to_linear(volume_db))
+    actual = RPR.GetMediaTrackInfo_Value(master.id, "D_VOL")
+    return _linear_to_db(float(actual))
 
 
 def register_tools(mcp):
@@ -76,8 +94,8 @@ def register_tools(mcp):
         try:
             project = get_project()
             master = project.master_track
-            master.volume = volume_db
-            return {"success": True, "volume_db": master.volume}
+            actual_db = _set_master_volume_db(master, volume_db)
+            return {"success": True, "volume_db": round(actual_db, 6)}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
