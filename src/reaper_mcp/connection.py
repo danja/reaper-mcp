@@ -1,5 +1,6 @@
 import logging
 import reapy
+from reapy import reascript_api as RPR
 
 logger = logging.getLogger("reaper_mcp.connection")
 
@@ -8,10 +9,15 @@ _connected = False
 
 def ensure_connected() -> None:
     global _connected
-    if _connected:
+    if _connected and hasattr(RPR, "EnumProjects"):
         return
     try:
-        reapy.connect()
+        if hasattr(RPR, "EnumProjects"):
+            reapy.connect()
+        else:
+            reapy.reconnect()
+        if not hasattr(RPR, "EnumProjects"):
+            raise RuntimeError("REAPER connected without exposing EnumProjects")
         _connected = True
         logger.info("Connected to REAPER")
     except Exception as e:

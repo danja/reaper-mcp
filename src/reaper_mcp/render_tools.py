@@ -31,6 +31,10 @@ BIT_DEPTH_CODES = {
 # before execution; IDs outside this small native family are never considered.
 TRACK_RENDER_ACTION_IDS = range(41716, 41722)
 
+# GetSetProjectInfo RENDER_BOUNDSFLAG values from the REAPER ReaScript API.
+RENDER_BOUNDS_ENTIRE_PROJECT = 1
+RENDER_BOUNDS_TIME_SELECTION = 2
+
 
 def _resolved_output_path(output_path: str, format: str) -> Path:
     """Return the exact file path REAPER should create for a render."""
@@ -161,7 +165,9 @@ def render_to_temp_file(sample_rate: int = 48000) -> str:
     """
     import tempfile
     tmp = tempfile.mktemp(suffix=".wav")
-    tmp = _set_render_settings(tmp, "wav", sample_rate, 24, 2, bounds=0)
+    tmp = _set_render_settings(
+        tmp, "wav", sample_rate, 24, 2, bounds=RENDER_BOUNDS_ENTIRE_PROJECT
+    )
     RPR.Main_OnCommand(41824, 0)
     return tmp
 
@@ -305,7 +311,12 @@ def register_tools(mcp):
             output_path = str(_resolved_output_path(output_path, format))
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             output_path = _set_render_settings(
-                output_path, format, sample_rate, bit_depth, channels, bounds=0
+                output_path,
+                format,
+                sample_rate,
+                bit_depth,
+                channels,
+                bounds=RENDER_BOUNDS_ENTIRE_PROJECT,
             )
             RPR.Main_OnCommand(41824, 0)  # File: Render project to disk (no dialog)
             result = _render_file_result(output_path)
@@ -338,7 +349,12 @@ def register_tools(mcp):
             project = get_project()
             project.time_selection = (start, end)
             output_path = _set_render_settings(
-                output_path, format, sample_rate, bit_depth, channels, bounds=1
+                output_path,
+                format,
+                sample_rate,
+                bit_depth,
+                channels,
+                bounds=RENDER_BOUNDS_TIME_SELECTION,
             )
             RPR.Main_OnCommand(41824, 0)
             result = _render_file_result(output_path)
@@ -382,7 +398,12 @@ def register_tools(mcp):
                 safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in track_name)
                 stem_path = os.path.join(output_directory, f"{safe_name}.{format}")
                 stem_path = _set_render_settings(
-                    stem_path, format, sample_rate, bit_depth, 2, bounds=0
+                    stem_path,
+                    format,
+                    sample_rate,
+                    bit_depth,
+                    2,
+                    bounds=RENDER_BOUNDS_ENTIRE_PROJECT,
                 )
                 RPR.Main_OnCommand(41824, 0)
                 result = _render_file_result(stem_path)
@@ -501,7 +522,12 @@ def register_tools(mcp):
             project.cursor_position = float(start)
             project.time_selection = (float(start), render_end)
             output_path = _set_render_settings(
-                str(output), "wav", sample_rate, bit_depth, channels, bounds=1
+                str(output),
+                "wav",
+                sample_rate,
+                bit_depth,
+                channels,
+                bounds=RENDER_BOUNDS_TIME_SELECTION,
             )
             RPR.Main_OnCommand(41824, 0)  # File: Render project to disk (no dialog)
             result = _render_file_result(output_path)
