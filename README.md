@@ -1,5 +1,9 @@
 # REAPER MCP Server
 
+> **Fork note:** This fork contains various reliability bugfixes, including
+> reconnecting when REAPER starts after the MCP server, correct render bounds,
+> and correct dB-to-linear master-volume handling.
+
 A Model Context Protocol (MCP) server that enables AI agents to control REAPER DAW — 58 tools covering project management, tracks, MIDI, FX, mixing, mastering, rendering, and audio analysis.
 
 ## Requirements
