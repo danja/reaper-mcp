@@ -1,3 +1,6 @@
+The MCP Reaper tools are erroring on FX queries. Let me
+   try a different tool. 
+   
 # Building a Techno Anthem from Scratch with Downspout and REAPER
 
 I recently set myself a fairly specific challenge: start with an empty REAPER project, use the instruments and processors in the Downspout collection as the musical core, and turn them into a complete techno dance anthem rather than a short generative experiment.
