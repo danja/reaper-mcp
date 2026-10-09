@@ -263,17 +263,22 @@ def register_tools(mcp):
             if master_cc is None:
                 master_cc = "nil"
 
-            script_body = _LUA_TEMPLATE.format(
-                device_name=preset["name"],
-                midi_input_index=midi_input_index,
-                midi_channel=preset.get("midi_channel", 0),
-                track_offset=track_offset,
-                track_end=track_offset + n - 1,
-                master_fader_cc=master_cc,
-                fader_map=_lua_table(fader_map),
-                pan_map=_lua_table(pan_map),
-                mute_map=_lua_table(mute_map),
-            )
+            # Use simple token replacement instead of .format() to avoid
+            # conflicts between Python format syntax and Lua table braces.
+            replacements = {
+                "{device_name}":      preset["name"],
+                "{midi_input_index}": str(midi_input_index),
+                "{midi_channel}":     str(preset.get("midi_channel", 0)),
+                "{track_offset}":     str(track_offset),
+                "{track_end}":        str(track_offset + n - 1),
+                "{master_fader_cc}":  str(master_cc),
+                "{fader_map}":        _lua_table(fader_map),
+                "{pan_map}":          _lua_table(pan_map),
+                "{mute_map}":         _lua_table(mute_map),
+            }
+            script_body = _LUA_TEMPLATE
+            for token, value in replacements.items():
+                script_body = script_body.replace(token, value)
 
             resource_path = RPR.GetResourcePath()
             scripts_dir = os.path.join(resource_path, "Scripts", "reaper-mcp")
